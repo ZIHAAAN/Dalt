@@ -16,6 +16,8 @@ const createNewUser = (user) => {
   });
 };
 
+exports.recommendation = async (req, res) => {};
+
 //http://127.0.0.1:3000/restaurant?latitude=1&longitude=2&radius=3 (meter)
 exports.restaurant = async (req, res) => {
   const { latitude, longitude, radius } = req.query;
@@ -56,18 +58,45 @@ exports.restaurant = async (req, res) => {
   } while (nextPageToken);
   return res.json({ restaurants: allResults });
 };
-exports.info = async (req, res) => {
+exports.setPreference = async (req, res) => {
   const {
-    name,
-    age,
-    distance,
-    longitude,
-    latitude,
-    foodType,
-    drinkType,
-    cuisine,
+    // 用户基本信息
+    name, // 用户名
+    age, // 用户年龄
+
+    // 个人偏好
+    preferredCuisines, // 喜爱的菜系（字符串，例如："Italian,Chinese"）
+    excludedCuisines, // 不喜欢的菜系（字符串，例如："Vegan"）
+    mealType, // 餐点类型（字符串，例如："dinner"）
+    atmosphere, // 用餐氛围（字符串，例如："casual"）
+    seatingPreferences, // 座位偏好（字符串，例如："indoor,pet-friendly"）
+
+    // 基于位置的偏好
+    maxDistance, // 最大距离半径（数字，例如："5"）
+    travelBeyondRadius, // 是否愿意超出设定距离（布尔值 例如：true）
+    frequentedAreas, // 常去的区域（字符串，例如："Downtown,West Side"）
+
+    // 口味和生活方式偏好
+    favoriteDishes, // 喜爱的菜品（字符串，例如："sushi,burgers"）
+    dislikedDishes, // 不喜欢的菜品（字符串，例如："tofu"）
+    diningTimes, // 用餐时间（字符串，例如："early dinner,late-night cravings"）
+    diningCompanions, // 用餐伙伴（字符串，例如："family,friends"）
+
+    // // 用户行为和反馈
+    // ratingHistory,         // 用户评分历史（字符串，例如："Restaurant1:5,Restaurant2:4"）
+    // orderHistory,          // 用户订单历史（字符串，例如："Sushi:2,Burgers:3"）
+
+    //userFeedback, // 用户反馈（字符串，例如："Great service, love the atmosphere"）
+
+    // 附加偏好
+    cuisineExperimentation, // 是否愿意尝试新菜系（布尔值，例如：true）
+    strictPreference, // 是否严格遵守偏好（布尔值，false）
+    ambianceFeatures, // 环境功能偏好（字符串，例如："quiet,well-lit"）
+    weatherSpecificPreferences, // 天气特定偏好（字符串，例如："summer:ice cream,winter:soup"）
   } = req.body;
+
   console.log(req.body);
+
   return res.send({ status: "SUCCESS" });
 };
 exports.register = async (req, res) => {
@@ -97,6 +126,46 @@ exports.register = async (req, res) => {
 };
 exports.login = async (req, res) => {
   const { username, password } = req.body;
-  console.log(req.body);
-  return res.send({ status: "SUCCESS" });
+
+  try {
+    // Validate request body
+    if (!username || !password) {
+      return res.status(400).send({
+        status: "FAIL",
+        message: "Username and password are required.",
+      });
+    }
+
+    // Fetch user details from the database
+    // const userQuery = 'SELECT * FROM users WHERE username = ?';
+    // const [user] = await db.query(userQuery, [username]);
+    //let result;
+    const user = await UserDb.getUserByUsername(username);
+    console.log("user:", user);
+
+    if (user.kind === "not_found") {
+      console.log("User not found");
+      return res
+        .status(401)
+        .send({ status: "FAIL", message: "Invalid username or password." });
+    } else {
+      console.log("User found:", user);
+    }
+
+    // Set session data
+    req.session.user = {
+      userId: user.user_id,
+      username: user.username,
+    };
+
+    // Send success response
+    return res
+      .status(200)
+      .send({ status: "SUCCESS", message: "Login successful." });
+  } catch (error) {
+    console.error("Error during login:", error);
+    return res
+      .status(500)
+      .send({ status: "ERROR", message: "An error occurred during login." });
+  }
 };

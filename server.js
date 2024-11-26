@@ -1,5 +1,7 @@
 // Setup Express
 const express = require("express");
+const session = require("express-session");
+
 const cors = require("cors");
 
 const app = express();
@@ -10,6 +12,14 @@ app.use(cors());
 // To help with POST and PUT requests to the server
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(
+  session({
+    secret: "your-secret-key", // Replace with a strong secret key
+    resave: false, // Avoid resaving session if not modified
+    saveUninitialized: true, // Save new sessions even if they are empty
+    cookie: { secure: false }, // Set to true if using HTTPS
+  })
+);
 
 app.use(express.static("public"));
 
