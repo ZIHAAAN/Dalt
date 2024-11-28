@@ -94,10 +94,34 @@ exports.setPreference = async (req, res) => {
     ambianceFeatures, // 环境功能偏好（字符串，例如："quiet,well-lit"）
     weatherSpecificPreferences, // 天气特定偏好（字符串，例如："summer:ice cream,winter:soup"）
   } = req.body;
+  try {
+    if (!req.session.user || !req.session.user.userId) {
+      return res.status(401).send({ status: "Please log in." });
+    }
+    const userId = req.session.user.userId;
+    console.log(req.body);
+    await UserDb.setPreference(req.body, userId);
 
-  console.log(req.body);
+    return res.send({ status: "SUCCESS" });
+  } catch (error) {
+    console.log("Error when set preference", error);
+  }
+};
+exports.getPreference = async (req, res) => {
+  try {
+    if (!req.session.user || !req.session.user.userId) {
+      return res.status(401).send({ status: "Please log in." });
+    }
+    const userId = req.session.user.userId;
+    //console.log(req.body);
+    let user = await UserDb.getUserByUserId(userId);
+    delete user.password;
+    console.log("user:", user);
 
-  return res.send({ status: "SUCCESS" });
+    return res.send(user);
+  } catch (error) {
+    console.log("Error when get preference", error);
+  }
 };
 exports.register = async (req, res) => {
   const { username, password } = req.body;
