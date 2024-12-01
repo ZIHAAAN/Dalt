@@ -6,5 +6,8 @@ module.exports = (app) => {
   app.post("/api/preference", userController.setPreference);
   app.get("/api/preference", userController.getPreference);
   app.get("/api/restaurant", userController.restaurant);
-  app.get("/api/recommendation", userController.recommendation);
+  app.post(
+    "/api/recommendationByLocation",
+    userController.recommendationByLocation
+  );
 };
