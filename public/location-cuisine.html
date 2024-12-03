@@ -395,14 +395,17 @@
                                             <select class="form-control" id="cuisineSelect">
                                                 <option value="Chinese">Chinese</option>
                                                 <option value="Korean">Korean</option>
-                                                <option value="South Indian">South Indian</option>
-                                                <option value="North Indian">North Indian</option>
-                                                <option value="French">French</option>
+                                                <option value="Indian">Indian</option>
+                                                <!-- <option value="North Indian">North Indian</option> -->
+                                                <!-- <option value="French">French</option> -->
+                                                <option value="Japanese">Japanese</option>
+                                                <!-- <option value="British">British</option> -->
                                                 <option value="Thai">Thai</option>
                                                 <option value="Mexicon">Mexicon</option>
                                                 <option value="Italian">Italian</option>
                                                 <option value="American">American</option>
-                                                <option value="Local">Local</option>
+                                                <option value="Fast Food">Fast Food</option>
+                                                <!-- <option value="Local">Local</option> -->
                                             </select>
                                         </div>
 
@@ -417,9 +420,9 @@
                                             <label for="" id="label-field-7"> Distance </label>
                                             <!-- <input name="field-7" id="field-7" required placeholder="Location"
                                                 type="text"> -->
-                                            <input type="range" id="distance" name="distance" min="0" max="400"
-                                                value="10" oninput="this.nextElementSibling.value = this.value">
-                                            <output>10</output>
+                                            <input type="range" id="distance" name="distance" min="0" max="100"
+                                                value="10" oninput="this.nextElementSibling.value = this.value+' KM'">
+                                            <output>10 KM</output>
 
                                         </div>
 
@@ -642,6 +645,17 @@
 
         document.getElementById("restaurantForm").addEventListener("submit", async function (e) {
             e.preventDefault();
+            const distance = document.getElementById("distance").value;
+            if (!latitude || !longitude || !distance) {
+                alert("Failed to obtain location information");
+                return
+            }
+            const subButton = document.getElementById("textforsubmitbtn");
+            subButton.disabled = true;
+            subButton.style.color = "#fff";
+            subButton.style.background = "#ccc";
+            subButton.style.border = "1px solid #ccc";
+            subButton.style.cursor = "not-allowed";
 
             // Collect form data
             const formData = new FormData(e.target);
@@ -649,12 +663,21 @@
 
             // Add the cuisine selection manually
             const cuisine = document.getElementById("cuisineSelect").value;
-            const distance = document.getElementById("distance").value;
+
 
             // Construct query string from data object
             const queryString = new URLSearchParams(data).toString();
 
             console.log("Query String:", queryString); // Log the query string to verify
+
+            subButton.textContent = "Getting restaurant";
+            let dots = 0;
+
+
+            const intervalId = setInterval(() => {
+                dots = (dots + 1) % 4; //  0 to 3 point
+                subButton.textContent = "Getting restaurant" + ".".repeat(dots);
+            }, 500);
 
             try {
                 // Send GET request with query string
@@ -663,24 +686,66 @@
                         "Content-Type": "application/json",
                     },
                 });
-
+                const restaurantList = document.getElementById("restaurant-list");
+                restaurantList.innerHTML = "";
                 console.log("Submission Successful:", response.data);
                 if (Array.isArray(response.data.restaurants) && response.data.restaurants.length != 0) {
-                    const restaurantList = document.getElementById("restaurant-list");
-                    response.data.restaurants.forEach(restaurant => {
-                        const restaurantDiv = document.createElement("div");
-                        restaurantDiv.className = "restaurant-item";
-                        restaurantDiv.innerHTML = `
+                    if (response.data.restaurants.length >= 3) {
+
+                        clearInterval(intervalId);
+                        subButton.textContent = "AI analyzing";
+                        const intervalId2 = setInterval(() => {
+                            dots = (dots + 1) % 4; //  0 to 3 point
+                            subButton.textContent = "AI analyzing" + ".".repeat(dots);
+                        }, 500);
+
+                        const aiResponse = await axios.post(`http://localhost:3000/api/recommendationByLocation`, { restaurants: response.data.restaurants }, {
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                        });
+                        console.log(aiResponse)
+
+                        const jsonMatch = aiResponse.data.restaurants.match(/\[.*?\]/s);
+
+                        if (jsonMatch) {
+                            clearInterval(intervalId2);
+                            subButton.textContent = "Resubmit";
+                            try {
+                                const jsonData = JSON.parse(jsonMatch[0]); // 将提取的 JSON 字符串解析为对象
+                                console.log("jsonData", jsonData);
+                                jsonData.forEach(restaurant => {
+                                    const restaurantDiv = document.createElement("div");
+                                    restaurantDiv.className = "restaurant-item";
+                                    restaurantDiv.innerHTML = `
                                                 <h3>${restaurant.name}</h3>
                                                 <p>Address: ${restaurant.vicinity}</p>
                                                 <p>Rating: ${restaurant.rating}</p>
                                             `;
-                        restaurantList.appendChild(restaurantDiv);
-                    });
+                                    restaurantList.appendChild(restaurantDiv);
+                                });
+                            } catch (error) {
+                                console.error('JSON 解析失败:', error);
+                            }
+                        } else {
+                            console.error('未找到 JSON 数据');
+                        }
+
+
+
+                    }
+
+
                 }
 
             } catch (error) {
                 console.error("Error during submission:", error.response || error.message);
+            }
+            finally {
+                subButton.disabled = false;
+                subButton.style.background = "#d10f56";
+                subButton.style.border = "1px solid #d10f56";
+                subButton.style.cursor = "";
             }
         });
 
